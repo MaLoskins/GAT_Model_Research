@@ -23,6 +23,7 @@ def generate_embeddings(
     device="cuda",
     apply_dim_reduction=False,
     reduced_dim_size=100,
+    mode="sentence",
     debug=False
 ):
     if debug:
@@ -32,7 +33,8 @@ def generate_embeddings(
     if embedding_method.lower() == "bert":
         embedding_dim = embedding_dim or 768  # BERT's hidden size
     elif embedding_method.lower() in ["glove", "word2vec"]:
-        embedding_dim = embedding_dim  # Use provided embedding_dim
+        if embedding_dim is None:
+            raise ValueError(f"embedding_dim must be specified for {embedding_method}.")
     else:
         raise ValueError("Unsupported embedding_method. Choose from 'glove', 'word2vec', or 'bert'.")
 
@@ -83,21 +85,32 @@ def generate_embeddings(
         # Generate embeddings
         if debug:
             print("Generating embeddings...")
-        processed_df['embedding'] = processed_df['tokenized_text'].apply(
-            lambda tokens: embedding_creator.get_embedding(tokens)
-        )
+        if mode == "sentence":
+            processed_df['embedding'] = processed_df['tokenized_text'].apply(
+                lambda tokens: embedding_creator.get_embedding(tokens)
+            )
+        elif mode == "word":
+            processed_df['embedding'] = processed_df['tokenized_text'].apply(
+                lambda tokens: embedding_creator.get_word_embeddings(tokens)
+            )
+        else:
+            raise ValueError("Unsupported mode. Choose 'sentence' or 'word'.")
+
         if debug:
             print("Embedding generation completed.")
 
         # Remove rows with zero embeddings (if any)
         initial_count = len(processed_df)
-        processed_df = processed_df[processed_df['embedding'].apply(lambda x: not np.all(x == 0))].reset_index(drop=True)
+        if mode == "sentence":
+            processed_df = processed_df[processed_df['embedding'].apply(lambda x: not np.all(x == 0))].reset_index(drop=True)
+        elif mode == "word":
+            processed_df = processed_df[processed_df['embedding'].apply(lambda x: x.shape[0] > 0)].reset_index(drop=True)
         removed_count = initial_count - len(processed_df)
         if removed_count > 0 and debug:
             print(f"Removed {removed_count} rows with zero embeddings.")
 
-        # Apply PCA for Dimensionality Reduction (if enabled)
-        if apply_dim_reduction:
+        # Apply PCA for Dimensionality Reduction (if enabled and mode is sentence)
+        if apply_dim_reduction and mode == "sentence":
             if debug:
                 print("Applying PCA for dimensionality reduction...")
             from sklearn.decomposition import PCA
