@@ -1,0 +1,37 @@
+# Ignore cache directories and their contents
+Bert_Cache/
+Pickle_Files/
+__pycache__/
+
+# Ignore CSV files in CSV_Files and other directories
+CSV_Files/
+*.csv
+
+# Ignore Pickle files
+*.pkl
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore Python bytecode files
+*.py[cod]
+
+# Ignore virtual environment folder
+.venv/
+
+# Ignore system files
+*.DS_Store
+*.log
+
+# Ignore Jupyter Notebook files if necessary (optional, uncomment if required)
+#*.ipynb
+
+# Ignore any large machine learning models or tokenizers in Bert_Cache
+Bert_Cache/models--bert-base-uncased/blobs/
+Bert_Cache/models--bert-base-uncased/snapshots/
+
+# Ignore any specific cache or model checkpoints that might be generated
+Glove_Cache/
+Word2Vec_Cache/
+
+
