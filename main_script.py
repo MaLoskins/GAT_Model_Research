@@ -17,6 +17,8 @@ def main():
     parser.add_argument('--apply_dim_reduction', action='store_true', help='Whether to apply dimensionality reduction.')
     parser.add_argument('--reduced_dim_size', type=int, default=100, help='Reduced dimension size if dimensionality reduction is applied.')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode for verbose output.')
+    parser.add_argument('--plot_embeddings', action='store_true', help='Plot the embeddings using UMAP. Only works with sentence embeddings.')
+    parser.add_argument('--plot_node_count', type=int, default=10000, help='Number of nodes to plot.')
 
     args = parser.parse_args()
 
@@ -103,15 +105,23 @@ def main():
 
     from Visualisations.embedding_plotter import EmbeddingPlotter
 
-    plotter = EmbeddingPlotter(
-        color_column='label',        # The column to use for coloring
-        text_column='tokenized_text',
-        n=20000,                      # Number of samples to plot
-        name='embedding_visualization',
-        renderer='browser'           # Or 'notebook' if using Jupyter
-    )
 
-    plotter.plot_updated_embeddings(processed_df)
+    #-----------------------------------------------------------
+    # Plotting the Embeddings
+    
+    if args.plot_embeddings:
+        plotter = EmbeddingPlotter(
+            color_column='label',        # The column to use for coloring
+            text_column='tokenized_text',
+            n=args.plot_node_count,        # Number of samples to plot
+            name='embedding_visualization',
+            renderer='browser'           # Or 'notebook' if using Jupyter
+        )
+
+        plotter.plot_updated_embeddings(processed_df)
+    #-----------------------------------------------------------
+
+
 
 if __name__ == "__main__":
     main()
