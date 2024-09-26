@@ -1,5 +1,5 @@
 import os
-from Pheme_to_CSV.pheme_processor import PhemeProcessor
+from pheme_processor import PhemeProcessor
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -14,20 +14,20 @@ def main():
     events = [
         # 'charliehebdo',
         # 'ebola-essien',
-        # 'ferguson',
-        # 'germanwings-crash',
-        # 'gurlitt',
-        # 'ottawashooting',
-        #'prince-toronto',
-        'sydneysiege'
+        'ferguson',
+        #'germanwings-crash',
+        'gurlitt',
+        'ottawashooting',
+        'prince-toronto'
+        #'sydneysiege'
         #'putinmissing'
     ]
     
     # Create Directory "CSV_Files" in the base directory if it doesn't exist
-    os.makedirs(os.path.join(r'C:\Users\matth\OneDrive\Desktop\1. DATA SCIENCE MASTER\Research_CITS5014\MY_OWN_GAT', 'CSV_Files'), exist_ok=True)
+    os.makedirs(os.path.join('CSV_Files'), exist_ok=True)
 
     # Optionally, specify an output directory for CSV files
-    output_dir = r'C:\Users\matth\OneDrive\Desktop\1. DATA SCIENCE MASTER\Research_CITS5014\MY_OWN_GAT\CSV_Files' # Project Directory
+    output_dir = 'CSV_Files' # Project Directory
     
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)

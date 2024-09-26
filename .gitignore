@@ -2,6 +2,7 @@
 Bert_Cache/
 Pickle_Files/
 __pycache__/
+lib/
 
 # Ignore CSV files in CSV_Files and other directories
 CSV_Files/
