@@ -5,8 +5,8 @@ import io
 import pandas as pd
 import streamlit as st
 import numpy as np
+import networkx as nx
 from utils import (
-    
     encode_categorical_columns,
     run_processing,
     load_data,
@@ -18,6 +18,8 @@ from utils import (
 from Text_Processing.embedding_module import EmbeddingModule
 from Visualisations.embedding_plotter import EmbeddingPlotter
 from Binning.data_binner import DataBinner
+from Graph_Processing.graph_creator import GraphCreator
+from Graph_Processing.graph_visualizer import GraphVisualizer
 import matplotlib.pyplot as plt
 
 # Initialize EmbeddingModule
@@ -60,6 +62,13 @@ if 'aggregated_features' not in st.session_state:
 if 'embeddings_generated' not in st.session_state:
     st.session_state.embeddings_generated = False
 
+# New session state variables for Graph Processing
+if 'graph_created' not in st.session_state:
+    st.session_state.graph_created = False
+
+if 'graph' not in st.session_state:
+    st.session_state.graph = None
+
 # ============================
 # Main Application
 # ===========================
@@ -73,7 +82,7 @@ with st.sidebar:
     # Tab selection via radio buttons
     active_tab = st.radio(
         "🔀 Select Mode:",
-        ("📊 Binning", "🔢 Generate Embeddings")
+        ("📊 Binning", "🔢 Generate Embeddings", "🌐 Graph Processing")
     )
     
     st.markdown("---")
@@ -144,6 +153,18 @@ with st.sidebar:
         st.header("🗂️ Embedding Text Settings")
         
         # Text Column Selection will be handled in the main content area
+
+    elif active_tab == "🌐 Graph Processing":
+        st.header("🌐 Heterogeneous Graph Creation & Visualization")
+        
+        # No sidebar-specific settings for the graph tab
+        st.markdown("### 📌 Instructions")
+        st.write("""
+            - Ensure that you have generated embeddings in the '🔢 Generate Embeddings' tab.
+            - Select the source and target ID columns to establish relationships.
+            - Specify the type of relationship (e.g., replies_to, mentions).
+            - Create and visualize the graph.
+        """)
 
 # Main Content Area
 if active_tab == "📊 Binning":
@@ -457,3 +478,109 @@ elif active_tab == "🔢 Generate Embeddings":
                     st.success("✅ Updated dataframe successfully downloaded as Pickle!")
             except Exception as e:
                 st.error(f"❌ Error during dataframe download: {e}")
+
+elif active_tab == "🌐 Graph Processing":
+    st.header("🌐 Heterogeneous Graph Creation & Visualization")
+    
+    # Check if embeddings have been generated
+    if st.session_state.get('embeddings_generated', False):
+        st.info("🔄 **Embeddings are available. Proceed to create and visualize the graph.**")
+        
+        # Select columns for graph creation
+        st.subheader("🔗 Select ID Columns for Graph Relationships")
+        
+        # Identify potential ID columns
+        id_columns = st.session_state.processed_df.columns.tolist()
+        
+        # Allow user to select source and target ID columns
+        source_id_col = st.selectbox("🔸 Select Source ID Column", options=id_columns, key="source_id")
+        target_id_col = st.selectbox("🔹 Select Target ID Column", options=id_columns, key="target_id")
+        
+        # Allow user to specify relationship type
+        relationship_type = st.text_input("🔗 Relationship Type", value="replies_to")
+        
+        # Button to create graph
+        if st.button("🚀 Create Heterogeneous Graph"):
+            if source_id_col == target_id_col:
+                st.error("❌ Source and Target ID columns must be different.")
+            else:
+                try:
+                    # Identify rows with nulls in selected columns
+                    null_rows = st.session_state.processed_df[
+                        st.session_state.processed_df[[source_id_col, target_id_col]].isnull().any(axis=1)
+                    ]
+                    num_null_rows = null_rows.shape[0]
+                    
+                    if num_null_rows > 0:
+                        st.warning(f"⚠️ Found {num_null_rows} rows with null values in selected columns. These rows will be removed.")
+                        # Optionally, display the rows being removed
+                        with st.expander("🔍 View Rows to be Removed"):
+                            st.dataframe(null_rows)
+                        # Drop the rows with nulls in selected columns
+                        st.session_state.processed_df = st.session_state.processed_df.dropna(subset=[source_id_col, target_id_col])
+                    
+                    with st.spinner('Creating graph...'):
+                        # Convert ID columns to string with prefixes
+                        st.session_state.processed_df[source_id_col] = "source_" + st.session_state.processed_df[source_id_col].astype(str)
+                        st.session_state.processed_df[target_id_col] = "target_" + st.session_state.processed_df[target_id_col].astype(str)
+                        
+                        # Create graph
+                        graph_creator = GraphCreator(st.session_state.processed_df)
+                        graph = graph_creator.create_graph(source_id_col, target_id_col, relationship_type)
+                        st.session_state.graph = graph
+                        st.session_state.graph_created = True
+                    st.success("✅ Heterogeneous graph created successfully!")
+                    
+                    # Display graph statistics
+                    st.markdown("### 📊 Graph Statistics")
+                    st.write(f"**Number of Nodes:** {graph.number_of_nodes()}")
+                    st.write(f"**Number of Edges:** {graph.number_of_edges()}")
+                    st.write(f"**Number of Relationships:** {len(set(nx.get_edge_attributes(graph, 'relationship').values()))}")
+
+                    # Identify and display external target IDs
+                    internal_ids = set(st.session_state.processed_df[source_id_col].unique())
+                    external_target_ids = st.session_state.processed_df[
+                        ~st.session_state.processed_df[target_id_col].isin(internal_ids)
+                    ][target_id_col].unique()
+                    
+                    st.write(f"**Number of External Target IDs:** {len(external_target_ids)}")
+                    if len(external_target_ids) > 0:
+                        st.write(f"**Sample External Target IDs:** {external_target_ids[:5]}")
+    
+                except Exception as e:
+                    st.error(f"❌ Error during graph creation: {e}")
+    
+        # If graph is created, provide visualization option
+        if st.session_state.get('graph_created', False):
+            st.markdown("---")
+            st.subheader("📈 Visualize the Heterogeneous Graph")
+            
+            # Optionally, allow user to select number of nodes to visualize
+            node_limit = st.number_input("🔢 Number of Nodes to Visualize", min_value=10, max_value=10000, value=1000, step=10)
+            
+            # Button to visualize graph
+            if st.button("📈 Visualize Graph"):
+                try:
+                    with st.spinner('Generating graph visualization...'):
+                        # Extract a subgraph if the total nodes exceed the limit
+                        if st.session_state.graph.number_of_nodes() > node_limit:
+                            # Sample nodes
+                            sampled_nodes = list(st.session_state.graph.nodes)[:node_limit]
+                            subgraph = st.session_state.graph.subgraph(sampled_nodes).copy()
+                        else:
+                            subgraph = st.session_state.graph
+                        
+                        # Optionally, convert to simple DiGraph to handle multiple edges
+                        if isinstance(subgraph, nx.MultiDiGraph):
+                            subgraph = nx.DiGraph(subgraph)
+                        
+                        # Initialize GraphVisualizer
+                        visualizer = GraphVisualizer(subgraph)
+                        
+                        # Display visualization
+                        visualizer.visualize()
+                    
+                except Exception as e:
+                    st.error(f"❌ Error during graph visualization: {e}")
+    else:
+        st.warning("⚠️ **Please generate embeddings first in the '🔢 Generate Embeddings' tab.**")
