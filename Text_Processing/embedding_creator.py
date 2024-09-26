@@ -12,8 +12,8 @@ warnings.filterwarnings("ignore")
 class EmbeddingCreator:
     def __init__(
         self,
-        embedding_method="glove",
-        embedding_dim=100,
+        embedding_method="bert",
+        embedding_dim=768,
         glove_cache_path=None,
         word2vec_model_path=None,
         bert_model_name="bert-base-uncased",

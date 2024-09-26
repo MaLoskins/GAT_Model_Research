@@ -30,7 +30,8 @@ class EmbeddingPlotter:
         n=1000,
         name='gat',
         word_limit=100,
-        renderer='browser'
+        renderer='browser',
+        embedding_column='embedding'
     ):
         """
         Initializes the EmbeddingPlotter.
@@ -48,6 +49,7 @@ class EmbeddingPlotter:
         self.name = name
         self.word_limit = word_limit
         self.renderer = renderer
+        self.embedding_column = embedding_column
 
         # Set Plotly renderer
         pio.renderers.default = self.renderer
@@ -62,7 +64,7 @@ class EmbeddingPlotter:
         start_time = time.time()
 
         # Validate required columns
-        required_columns = ['embedding', self.color_column, self.text_column]
+        required_columns = [self.embedding_column, self.color_column, self.text_column]
         for col in required_columns:
             if col not in df_embeddings.columns:
                 raise ValueError(f"DataFrame must contain '{col}' column.")
@@ -76,9 +78,9 @@ class EmbeddingPlotter:
 
         # Extract the embeddings and convert to a NumPy array
         try:
-            embedding_matrix = np.vstack(df_sampled['embedding'].values)
+            embedding_matrix = np.vstack(df_sampled[self.embedding_column].values)
         except Exception as e:
-            raise ValueError(f"Error converting 'embedding' column to NumPy array: {e}")
+            raise ValueError(f"Error converting self.embedding_column column to NumPy array: {e}")
 
         # Reduce the dimensionality to 3D using t-SNE
         print("Applying t-SNE for dimensionality reduction...")
@@ -115,8 +117,19 @@ class EmbeddingPlotter:
         colors_list = colors.tolist()
 
         # Create hover text for each point
+        def create_hover_text(row):
+            text = row[self.text_column]
+            # Ensure text is a string and not NaN
+            if isinstance(text, list):
+                text = ' '.join([word for word in text if len(word) <= self.word_limit])
+            elif isinstance(text, str):
+                text = ' '.join([word for word in text.split() if len(word) <= self.word_limit])
+            else:
+                text = ''
+            return f"{self.color_column}: {row[self.color_column]}, Text: {text}"
+
         hover_text = df_sampled_filtered.apply(
-            lambda row: f"{self.color_column}: {row[self.color_column]}, Text: {' '.join(row[self.text_column])}",
+            create_hover_text,
             axis=1
         )
 
