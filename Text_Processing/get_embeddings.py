@@ -13,6 +13,7 @@ def generate_embeddings(
     embedding_method,
     embedding_dim,
     target_column,
+    dataframe,
     input_file_path,
     output_csv_path,
     output_pkl_path,
@@ -45,16 +46,20 @@ def generate_embeddings(
         if debug:
             print("Embeddings do not exist. Generating new embeddings...")
 
-        # Check if the input CSV file exists
-        if not os.path.exists(input_file_path):
-            raise FileNotFoundError(f"CSV file not found: {input_file_path}")
+        if dataframe is None:
+            # Check if the input CSV file exists
+            if not os.path.exists(input_file_path):
+                raise FileNotFoundError(f"CSV file not found: {input_file_path}")
 
-        # Read the CSV file
-        if debug:
-            print(f"Reading CSV data from {input_file_path}...")
-        df = pd.read_csv(input_file_path)
-        if debug:
-            print("CSV data loaded.")
+            # Read the CSV file
+            if debug:
+                print(f"Reading CSV data from {input_file_path}...")
+            df = pd.read_csv(input_file_path)
+            if debug:
+                print("CSV data loaded.")
+        else:
+            df = dataframe
+        
 
         # Initialize the TextPreprocessor
         preprocessor = TextPreprocessor(
@@ -71,6 +76,7 @@ def generate_embeddings(
         if debug:
             print("Text preprocessing completed.")
 
+            
         # Initialize EmbeddingCreator
         embedding_creator = EmbeddingCreator(
             embedding_method=embedding_method,
